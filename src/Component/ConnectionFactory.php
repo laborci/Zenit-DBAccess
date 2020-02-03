@@ -18,7 +18,6 @@ class ConnectionFactory{
 			$defaults = Config::Service()->defaults;
 			$settings = array_merge($defaults, $databases[$name]);
 			$connection = static::factory($settings);
-			dump($connection);
 			return $connection;
 		}
 		return null;

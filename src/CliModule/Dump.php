@@ -10,24 +10,23 @@ use Zenit\Bundle\Mission\Component\Cli\CliModule;
 
 class Dump extends CliModule{
 
-	public function __construct($name = null){
-		parent::__construct($name);
-		$this->config = Config::Service();
-	}
-
 	protected function configure(){
 		$this->setName('dump');
 		$this->addOption("structure", "s", InputOption::VALUE_NONE, "Dump structure");
 		$this->addOption("data", "d", InputOption::VALUE_NONE, "Dump data");
-		$this->addOption("database", "db", InputOption::VALUE_REQUIRED, "Database name", $this->config->defaultDatabase);
+		$this->addOption("database", "db", InputOption::VALUE_REQUIRED, "Database name", null);
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output){
 
+		$this->config = Config::Service();
+
 		$style = new SymfonyStyle($input, $output);
 
-		$dbName = $input->getOption('database');
+		$dbName = $input->getOption('database') ?: $this->config->defaultDatabase;
 		$database = $this->config->databases[$dbName];
+		$defaults = $this->config->defaults;
+		$database = array_merge($defaults, $database);
 
 		$dsn = $database['scheme'] . ':dbname=' . $database['database'] . ';host=' . $database['host'];
 		
