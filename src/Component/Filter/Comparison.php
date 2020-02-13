@@ -2,15 +2,13 @@
 
 use Zenit\Bundle\DBAccess\Component\PDOConnection\AbstractPDOConnection;
 
-
 class Comparison{
 
 	/** @var string */
 	protected $field;
-
 	protected $value;
-
 	protected $operator = null;
+	protected $quote = true;
 
 	const OPERATOR_IS = 'is';
 	const OPERATOR_IS_NULL = 'is_null';
@@ -32,24 +30,29 @@ class Comparison{
 		$this->field = $field;
 	}
 
+	public function __toString(){return $this->field;}
+
+	protected function quoteValue($value, AbstractPDOConnection $connection, $addQuotationMarks = true){ return $this->quote ? $connection->quoteValue($value, $addQuotationMarks) : $value; }
+	protected function quoteArray($value, AbstractPDOConnection $connection, $addQuotationMarks = true){ return $this->quote ? $connection->quoteArray($value, $addQuotationMarks) : $value; }
+
 	public function getSql(AbstractPDOConnection $connection){
 		$sql = '';
 
 		switch ($this->operator){
 			case self::OPERATOR_IS:
-				$sql = " = {$connection->quoteValue($this->value)}";
+				$sql = " = {$this->quoteValue($this->value, $connection)}";
 				break;
 			case self::OPERATOR_GT:
-				$sql = " > {$connection->quoteValue($this->value)}";
+				$sql = " > {$this->quoteValue($this->value, $connection)}";
 				break;
 			case self::OPERATOR_GTE:
-				$sql = " >= {$connection->quoteValue($this->value)}";
+				$sql = " >= {$this->quoteValue($this->value, $connection)}";
 				break;
 			case self::OPERATOR_LT:
-				$sql = " < {$connection->quoteValue($this->value)}";
+				$sql = " < {$this->quoteValue($this->value, $connection)}";
 				break;
 			case self::OPERATOR_LTE:
-				$sql = " <= {$connection->quoteValue($this->value)}";
+				$sql = " <= {$this->quoteValue($this->value, $connection)}";
 				break;
 			case self::OPERATOR_IS_NULL:
 				$sql = ' IS NULL';
@@ -58,31 +61,31 @@ class Comparison{
 				$sql = ' IS NOT NULL';
 				break;
 			case self::OPERATOR_NOT_EQUAL:
-				$sql = " != {$connection->quoteValue($this->value)}";
+				$sql = " != {$this->quoteValue($this->value, $connection)}";
 				break;
 			case self::OPERATOR_IN:
-				$sql = " IN (".join(',', $connection->quoteArray($this->value)).")";
+				$sql = empty($this->value) ? "" : " IN (" . join(',', $this->quoteArray($this->value, $connection)) . ")";
 				break;
 			case self::OPERATOR_LIKE:
-				$sql = " LIKE {$connection->quoteValue($this->value)}";
+				$sql = " LIKE {$this->quoteValue($this->value, $connection)}";
 				break;
 			case self::OPERATOR_IN_STRING:
-				$sql = " LIKE '%{$connection->quoteValue($this->value, false)}%'";
+				$sql = " LIKE '%{$this->quoteValue($this->value, $connection)}%'";
 				break;
 			case self::OPERATOR_STARTS:
-				$sql = " LIKE '%{$connection->quoteValue($this->value, false)}''";
+				$sql = " LIKE '%{$this->quoteValue($this->value, $connection, false)}''";
 				break;
 			case self::OPERATOR_ENDS:
-				$sql = " LIKE '{$connection->quoteValue($this->value, false)}%'";
+				$sql = " LIKE '{$this->quoteValue($this->value, $connection, false)}%'";
 				break;
 			case self::OPERATOR_REGEX:
 				$sql = " REGEXP '{$this->value}'";
 				break;
 			case self::OPERATOR_BETWEEN:
-				$sql = " BETWEEN {$connection->quoteValue($this->value[0])} AND {$connection->quoteValue($this->value[1])}";
+				$sql = " BETWEEN {$this->quoteValue($this->value[0], $connection)} AND {$this->quoteValue($this->value[1], $connection)}";
 				break;
 		}
-		$sql = $connection->escapeSQLEntity($this->field).$sql;
+		$sql = $sql ? $connection->escapeSQLEntity($this->field) . $sql : "";
 		return $sql;
 	}
 
@@ -96,6 +99,10 @@ class Comparison{
 		$this->operator = self::OPERATOR_NOT_EQUAL;
 		$this->value = $value;
 		return $this;
+	}
+
+	public function isin($value){
+		return is_array($value) ? $this->in($value) : $this->is($value);
 	}
 
 	public function in(array $value){
@@ -175,6 +182,9 @@ class Comparison{
 		$this->operator = self::OPERATOR_LTE;
 		$this->value = $value;
 		return $this;
-
+	}
+	public function raw(){
+		$this->quote = false;
+		return $this;
 	}
 }
